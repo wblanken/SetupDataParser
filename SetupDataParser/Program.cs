@@ -48,19 +48,19 @@ namespace SetupDataParser
                             fs = null;
                             size = 0;
                             name = null;
-                            line = setupRead.ReadLine().Trim();
+                            line = setupRead.ReadLine();
 
-                            if (!done && line.StartsWith("//")) // Ignore commented lines
+                            if (!done && line.Trim().StartsWith("//")) // Ignore commented lines
                             {
                                 fileCopy += line + "\n";
                                 continue;
                             }
-                            else if (!done && line == "") // Ignore empty lines
+                            else if (!done && line.Trim() == "") // Ignore empty lines
                             {
                                 fileCopy += line + "\n";
                                 continue;
                             }
-                            else if (!done && line.Contains("UnusedVariables[SETUP_DATA_UNUSED_ELEMENTS];")) // Means we hit the end of the setup variables
+                            else if (!done && line.Trim().Contains("UnusedVariables[SETUP_DATA_UNUSED_ELEMENTS];")) // Means we hit the end of the setup variables
                             {
                                 fileCopy += line + "\n";
                                 done = true;
@@ -68,7 +68,7 @@ namespace SetupDataParser
                             }
                             else if (!done)
                             {
-                                string[] vals = line.Split(new Char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
+                                string[] vals = line.Trim().Split(new Char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
                                 name = vals[1];
                                 switch (vals[0])
                                 {
@@ -93,11 +93,29 @@ namespace SetupDataParser
                                 // Check for existing comment:
                                 if (vals.Length > 2 && vals[2] != null)
                                 {
-                                    
+                                    if (vals[2].Contains("0x"))
+                                    {
+                                        // Find out if there's an offset in the comment and check if it's correct already.
+                                        int i = vals[2].IndexOf("0x");
+                                        string offsetAsHex = string.Format("0x{0:X4}", offset);
+                                        if (vals[2].Substring(i, 6) != offsetAsHex)
+                                        {
+                                            string temp = vals[2].Remove(i, 6);
+                                            fileCopy += string.Format("  {0,-7} {1,-42}// 0x{2:X4}, {3}\n", vals[0], vals[1], offset, temp);
+                                        }
+                                        else
+                                        {
+                                            fileCopy += line + "\n";
+                                        }
+                                    }
+                                    else
+                                    {
+                                        fileCopy += string.Format("  {0,-7} {1,-42}// 0x{2:X4}, {3}\n", vals[0], vals[1], offset, vals[2]);
+                                    }
                                 }
                                 else
                                 {
-                                    fileCopy += string.Format("  {0,-10} {1,-32} \t\t// 0x{2:X4}\n", vals[0], vals[1], offset);
+                                    fileCopy += string.Format("  {0,-7} {1,-42}// 0x{2:X4}\n", vals[0], vals[1], offset);
                                 }
                             }
                             else // This just adds the line to the file copy after we're done with modifications
