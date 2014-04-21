@@ -22,6 +22,15 @@ namespace SetupDataParser
 
             List<SetupVariable> SetupVariables = new List<SetupVariable>();
 
+            ModProjectSetupStruct(SetupVariables);     
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="SetupVariables"></param>
+        private static void ModProjectSetupStruct(List<SetupVariable> SetupVariables)
+        {
             // Open ProjectStaticSetupStruct.h
             FileStream fs = null;
 
@@ -44,7 +53,7 @@ namespace SetupDataParser
                         string name = null;
 
                         while (!setupRead.EndOfStream)
-                        {                            
+                        {
                             fs = null;
                             size = 0;
                             name = null;
@@ -100,7 +109,12 @@ namespace SetupDataParser
                                         string offsetAsHex = string.Format("0x{0:X4}", offset);
                                         if (vals[2].Substring(i, 6) != offsetAsHex)
                                         {
+                                            // Remove the original offset from the comment if it's wrong
                                             string temp = vals[2].Remove(i, 6);
+                                            // Remove "//" from the original comment
+                                            i = temp.IndexOf("//");
+                                            temp = temp.Remove(i, 2);
+
                                             fileCopy += string.Format("  {0,-7} {1,-42}// 0x{2:X4}, {3}\n", vals[0], vals[1], offset, temp);
                                         }
                                         else
@@ -110,6 +124,8 @@ namespace SetupDataParser
                                     }
                                     else
                                     {
+                                        int i = vals[2].IndexOf("//");
+                                        string temp = vals[2].Trim().Remove(i, 2); // Trim and remove "//" from original comment"
                                         fileCopy += string.Format("  {0,-7} {1,-42}// 0x{2:X4}, {3}\n", vals[0], vals[1], offset, vals[2]);
                                     }
                                 }
@@ -135,8 +151,14 @@ namespace SetupDataParser
                     }
                     else
                     {
-                        // A previous backup exists, prompt the user for action...
-                        throw new NotImplementedException("Need to implement this backup file feature");
+                        // Keep up to 2 backups (this is probably not needed but is temporary
+                        string backup2 = backupFile + "2";
+                        if (File.Exists(backup2))
+                        {
+                            File.Delete(backup2);                            
+                        }
+                        File.Move(backupFile, backup2);
+                        File.Move(F_SETUP_STRUCT, backupFile);
                     }
 
                     // Write the updated line to the file:
@@ -145,7 +167,7 @@ namespace SetupDataParser
                     {
                         fs = null;
                         setupWrite.Write(fileCopy);
-                    }                    
+                    }
                 }
             }
             catch (Exception e)
@@ -156,7 +178,25 @@ namespace SetupDataParser
             {
                 if (fs != null)
                     fs.Dispose();
-            }            
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="lastUsedElement"></param>
+        private static void ModProjectSDL(int lastUsedElement)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="SetupVariables"></param>
+        private static void ModFactoryDefaults(List<SetupVariable> SetupVariables)
+        {
+            throw new NotImplementedException();
         }
     }
 
