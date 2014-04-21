@@ -10,7 +10,7 @@ namespace SetupDataParser
     {
         const string F_SETUP_STRUCT = "ProjectStaticSetupStruct.h";
         const string F_HP_FACTORY_DEFAULTS = "HpFactoryDefaults.c";
-        const string PROJECT_SDL = "HpLo6.sdl";
+        const string PROJECT_SDL = "HpL06.sdl";
 
         static void Main(string[] args)
         {
@@ -33,28 +33,40 @@ namespace SetupDataParser
                 }
                 else
                 {
+                    bool done = false;
+                    string fileCopy = null;
                     fs = new FileStream(F_SETUP_STRUCT, FileMode.Open, FileAccess.Read);
-                    using (StreamReader setupStruct = new StreamReader(fs))
+                    using (StreamReader setupRead = new StreamReader(fs))
                     {
-                        fs = null;
                         string line = null;
-                        uint location = 0x0001;
+                        uint offset = 0x0001;
                         uint size = 0;
                         string name = null;
 
-                        while (!setupStruct.EndOfStream)
-                        {
+                        while (!setupRead.EndOfStream)
+                        {                            
+                            fs = null;
                             size = 0;
                             name = null;
-                            line = setupStruct.ReadLine().Trim();
+                            line = setupRead.ReadLine().Trim();
 
-                            if (line.StartsWith("//")) // Ignore commented lines
+                            if (!done && line.StartsWith("//")) // Ignore commented lines
+                            {
+                                fileCopy += line + "\n";
                                 continue;
-                            else if (line == "") // Ignore empty lines
+                            }
+                            else if (!done && line == "") // Ignore empty lines
+                            {
+                                fileCopy += line + "\n";
                                 continue;
-                            else if (line.Contains("UnusedVariables[SETUP_DATA_UNUSED_ELEMENTS];")) // Means we hit the end of the setup variables
-                                break;
-                            else
+                            }
+                            else if (!done && line.Contains("UnusedVariables[SETUP_DATA_UNUSED_ELEMENTS];")) // Means we hit the end of the setup variables
+                            {
+                                fileCopy += line + "\n";
+                                done = true;
+                                continue;
+                            }
+                            else if (!done)
                             {
                                 string[] vals = line.Split(new Char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
                                 name = vals[1];
@@ -76,13 +88,46 @@ namespace SetupDataParser
                                     size *= Convert.ToUInt16(val);
                                 }
 
-                                SetupVariables.Add(new SetupVariable(name, size, location));
+                                SetupVariables.Add(new SetupVariable(name, size, offset));
+
+                                // Check for existing comment:
+                                if (vals.Length > 2 && vals[2] != null)
+                                {
+                                    
+                                }
+                                else
+                                {
+                                    fileCopy += string.Format("  {0,-10} {1,-32} \t\t// 0x{2:X4}\n", vals[0], vals[1], offset);
+                                }
+                            }
+                            else // This just adds the line to the file copy after we're done with modifications
+                            {
+                                fileCopy += line + "\n";
                             }
 
-                            location += size;
+                            offset += size;
                             line = null;
                         }
                     }
+                    // Rename the old file for backup copy
+                    string backupFile = F_SETUP_STRUCT + ".bak";
+                    if (!File.Exists(backupFile))
+                    {
+                        File.Move(F_SETUP_STRUCT, backupFile);
+                    }
+                    else
+                    {
+                        // A previous backup exists, prompt the user for action...
+                        throw new NotImplementedException("Need to implement this backup file feature");
+                    }
+
+                    // Write the updated line to the file:
+                    fs = new FileStream(F_SETUP_STRUCT, FileMode.Create, FileAccess.Write);
+                    using (StreamWriter setupWrite = new StreamWriter(fs))
+                    {
+                        fs = null;
+                        setupWrite.Write(fileCopy);
+                    }                    
                 }
             }
             catch (Exception e)
@@ -101,11 +146,11 @@ namespace SetupDataParser
     {
         private uint size;
         private string name;
-        private uint location;
+        private uint offset;
 
         public string Name { get { return name; } }
         public uint Size { get { return size; } }
-        public uint Location { get { return location; } }
+        public uint Offset { get { return offset; } set { value = offset; } }
 
         public SetupVariable(string name, uint size)
         {
@@ -113,10 +158,10 @@ namespace SetupDataParser
             this.size = size;
         }
 
-        public SetupVariable(string name, uint size, uint location)
+        public SetupVariable(string name, uint size, uint offset)
             : this(name, size)
         {
-            this.location = location;
+            this.offset = offset;
         }
     }
 }
