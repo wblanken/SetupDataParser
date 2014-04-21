@@ -22,13 +22,16 @@ namespace SetupDataParser
 
             List<SetupVariable> SetupVariables = new List<SetupVariable>();
 
-            ModProjectSetupStruct(SetupVariables);     
+            ModProjectSetupStruct(SetupVariables);
+            //ModFactoryDefaults(SetupVariables);
+            //ModProjectSDL(TODO);
         }
 
         /// <summary>
-        /// 
+        /// Parses the ProjectSetupStruct.h file to create a list of all the setup variables and their offsets.
+        /// Creates an updated version of that file that includes the appropriate offsets in a comment next to the variable definition.
         /// </summary>
-        /// <param name="SetupVariables"></param>
+        /// <param name="SetupVariables">List of setup variables, their size, their name and their offset.</param>
         private static void ModProjectSetupStruct(List<SetupVariable> SetupVariables)
         {
             // Open ProjectStaticSetupStruct.h
@@ -182,18 +185,19 @@ namespace SetupDataParser
         }
 
         /// <summary>
-        /// 
+        /// Modifies the SETUP_DATA_LAST_USED_ELEMENT token in the project SDL.
         /// </summary>
-        /// <param name="lastUsedElement"></param>
+        /// <param name="lastUsedElement">Offset of the last member of SetupVariables</param>
         private static void ModProjectSDL(int lastUsedElement)
         {
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// 
+        /// Parses HpFactoryDefaults.c to compare against the list created from ProjectStaticSetupStruct.h.
+        /// Updates the file with the correct offsets in the comments
         /// </summary>
-        /// <param name="SetupVariables"></param>
+        /// <param name="SetupVariables">List of setup variables, their size, their name and their offset.</param>
         private static void ModFactoryDefaults(List<SetupVariable> SetupVariables)
         {
             throw new NotImplementedException();
