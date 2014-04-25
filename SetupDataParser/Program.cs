@@ -201,6 +201,100 @@ namespace SetupDataParser
         private static void ModFactoryDefaults(List<SetupVariable> SetupVariables)
         {
             throw new NotImplementedException();
+            // Read down to static const SETUP_DATA SetupData_FactoryDefaults
+            // Should be Value:3 | Offset:53 | Type:1 | Field:3 (| = column)
+            // Try to keep the existing formatting approx every 8 lines there's a blank line (some variation)
+            // L01 has the values in hex, not sure if everyone should follow this (probably should follow whatever is there)
+            FileStream fs = null;
+
+            try
+            {
+                if (!File.Exists(F_HP_FACTORY_DEFAULTS))
+                {
+                    Console.WriteLine("Cannot find {0}!\nPlease run this utility in the root of your project directory.", F_HP_FACTORY_DEFAULTS);
+                }
+                else
+                {
+                    bool done = false;
+                    bool started = false;
+                    string fileCopy = null;
+                    fs = new FileStream(F_HP_FACTORY_DEFAULTS, FileMode.Open, FileAccess.Read);
+                    using (StreamReader setupRead = new StreamReader(fs))
+                    {
+                        string line = null;
+                        uint offset = 0x0001;
+                        uint size = 0;
+                        string name = null;
+
+                        while (!setupRead.EndOfStream)
+                        {
+                            fs = null;
+                            size = 0;
+                            name = null;
+                            line = setupRead.ReadLine();
+
+                            // We've hit the beginning of the setup variables
+                            if (line.Contains("static const SETUP_DATA SetupData_FactoryDefaults"))
+                            {
+                                started = true;                                
+                            }
+                            else if (done || !started || line.Trim().StartsWith("//") || line.Trim() == "") // Simply write the line out to the temp file
+                            {
+                                fileCopy += line + "\n";
+                            }
+                            else if (line.Trim().Contains("UINT8 UnusedVariables[SETUP_DATA_UNUSED_ELEMENTS];")) // We've hit the end
+                            {
+                                // TODO: Update the comment to show the unused offset
+                                done = true;
+                            }
+                            else 
+                            {
+                                // TODO: Error checking to make sure everything is aligned properly 
+                                    // Check the existing comments to make sure the name and expected name match
+                                    // Make sure the number values match any possible arrays
+                                // TODO: Add the offset value to the comment but leave the rest intact.
+                                // TODO(?): Print the values in hex
+                            }
+
+                            line = null;
+                        }
+                    }
+                    // Rename the old file for backup copy
+                    string backupFile = F_HP_FACTORY_DEFAULTS + ".bak";
+                    if (!File.Exists(backupFile))
+                    {
+                        File.Move(F_HP_FACTORY_DEFAULTS, backupFile);
+                    }
+                    else
+                    {
+                        // Keep up to 2 backups (this is probably not needed but is temporary
+                        string backup2 = backupFile + "2";
+                        if (File.Exists(backup2))
+                        {
+                            File.Delete(backup2);
+                        }
+                        File.Move(backupFile, backup2);
+                        File.Move(F_HP_FACTORY_DEFAULTS, backupFile);
+                    }
+
+                    // Write the updated line to the file:
+                    fs = new FileStream(F_HP_FACTORY_DEFAULTS, FileMode.Create, FileAccess.Write);
+                    using (StreamWriter setupWrite = new StreamWriter(fs))
+                    {
+                        fs = null;
+                        setupWrite.Write(fileCopy);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Caught exception: \n" + e.Message);
+            }
+            finally
+            {
+                if (fs != null)
+                    fs.Dispose();
+            }
         }
     }
 
